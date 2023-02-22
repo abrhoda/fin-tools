@@ -6,7 +6,7 @@ import numpy as np
 #import matplotlib.pyplot as plot
 
 # Configuration values
-SYMBOLS = {'XLE', 'XLK', 'XOP', 'XLY', 'XLV', 'XLU', 'XLRE', 'XLP', 'XLI', 'XLF', 'XLC', 'XLB', 'SMH', 'IWM', 'DOW', 'QQQ', 'ARKK'}
+SYMBOLS = ['XLE', 'XLK', 'XOP', 'XLY', 'XLV', 'XLU', 'XLRE', 'XLP', 'XLI', 'XLF', 'XLC', 'XLB', 'SMH', 'IWM', 'DOW', 'QQQ', 'ARKK']
 BASE = 'SPY'
 SMA_LENGTH = 20
 UPTREND_SMA_LENGTH = 100
@@ -34,10 +34,12 @@ def calculate_crs_sma(closing_sma_data_set, base_sma_data_set):
 def is_uptrend(closing_prices):
     beta(range(len(closing_prices)), closing_prices)
 
-def least_squares_fit(x_data, y_data):
+def least_squares_fit(x_data, y_data, n):
     # TODO allow for 3 param to find the least squares regression of the last X points
     # TODO throw if len(x_data) != len(y_data)
-    line = np.polyfit(x_data, y_data, 1)
+    x = x_data[-1*(n):]
+    y = y_data[-1*(n):]
+    line = np.polyfit(x, y, 1)
     return line
 
 if __name__ == '__main__':
@@ -51,6 +53,8 @@ if __name__ == '__main__':
                 start date - date from where data collection will begin. (default: 365)
                 
             Output: Ordered list of symbols returned from `tickers()` function where the symbol is in an uptrend based on the UPTREND_SMA_LENGTH value and the crs sma is increasing based on the SMA_LENGTH value. Uptrend/increasing is determined by the least squares regression line having a positive beta.
+
+
           ''')
     closing_prices = {}
     crs = {}
@@ -79,15 +83,12 @@ if __name__ == '__main__':
     for k, v in crs.items():
         # Gradient (d2x/dy2) of SYMBOL/BASE is the indicator of uptrend on crs.
         x_crs_points = range(len(crs_sma[k]))
-
-        # TODO currently not correct. This finds the beta of the last year's worth of 20 SMA points
-        # need to change to only using last 20 data points to see if crs on the short trend is in an uptrend.
-        crs_sma_regression_line = least_squares_fit(x_crs_points, crs_sma[k])
+        crs_sma_regression_line = least_squares_fit(x_crs_points, crs_sma[k], SMA_LENGTH)
         if crs_sma_regression_line[0] > 0.0:
             print(f'{k}/{BASE} CRS is in an uptrend.')
             longer_sma_points = calculate_sma(closing_prices[k], UPTREND_SMA_LENGTH)
             x_closing_points = range(len(longer_sma_points))
-            closing_price_regression_line = least_squares_fit(x_closing_points, longer_sma_points)
+            closing_price_regression_line = least_squares_fit(x_closing_points, longer_sma_points, UPTREND_SMA_LENGTH)
             if closing_price_regression_line[0] > 0.0:
                 print(f'{k} is in an uptrend based on {UPTREND_SMA_LENGTH} dma.')
                 derivatives.append((k, crs_sma_regression_line))
